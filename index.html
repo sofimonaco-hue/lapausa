@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>La Pausa — Disponibilidad</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{--bg:#F7F3EE;--surface:#fff;--border:#E2D9CE;--text:#2A2018;--muted:#9A8F82;--today:#C0392B;--accent:#378ADD;--danger:#C0392B;--success:#27AE60}
+body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--text);min-height:100vh}
+.header{background:var(--text);color:#F7F3EE;padding:16px 24px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px}
+.header h1{font-family:"DM Serif Display",serif;font-size:20px;font-weight:400}
+.header-sub{font-size:11px;color:#9A8F82;margin-left:8px}
+.nav-controls{display:flex;align-items:center;gap:8px}
+.nav-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#F7F3EE;border-radius:6px;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
+.nav-btn:hover{background:rgba(255,255,255,0.18)}
+.month-label{font-family:"DM Serif Display",serif;font-size:16px;min-width:150px;text-align:center;color:#F7F3EE}
+.today-btn{background:rgba(255,255,255,0.08);border:1px solid rgba(255,255,255,0.15);color:#F7F3EE;border-radius:6px;padding:5px 10px;cursor:pointer;font-size:11px;font-weight:600;letter-spacing:0.5px;text-transform:uppercase}
+.today-btn:hover{background:rgba(255,255,255,0.18)}
+.new-btn{background:var(--accent);border:none;color:#fff;border-radius:6px;padding:7px 14px;cursor:pointer;font-size:12px;font-weight:600;transition:background 0.15s}
+.new-btn:hover{background:#185FA5}
+.legend{display:flex;flex-wrap:wrap;gap:12px;padding:10px 24px;background:var(--surface);border-bottom:1px solid var(--border);align-items:center}
+.legend-item{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);font-weight:500}
+.legend-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.gantt-wrap{overflow-x:auto;padding-bottom:24px}
+.gantt{display:block}
+.day-header-row{display:flex;position:sticky;top:0;z-index:10;background:var(--surface);border-bottom:1px solid var(--border);box-shadow:0 1px 6px rgba(42,32,24,0.07)}
+.corner-cell{flex-shrink:0;background:var(--surface);border-right:2px solid var(--border);display:flex;align-items:center;padding:0 12px;font-size:10px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:0.8px}
+.day-header-cell{flex-shrink:0;padding:7px 0 5px;text-align:center;font-size:11px;color:var(--muted);font-weight:500;border-right:1px solid var(--border)}
+.day-header-cell .dow{display:block;font-size:9px;text-transform:uppercase;letter-spacing:0.5px;color:#BDB0A4;margin-bottom:1px}
+.day-header-cell.is-today{color:var(--today);font-weight:700}
+.day-header-cell.is-today .dow{color:var(--today);opacity:0.7}
+.day-header-cell.is-weekend{background:#FAF7F4}
+.cabana-row{display:flex;border-bottom:1px solid var(--border);min-height:52px;position:relative}
+.cabana-row:last-child{border-bottom:none}
+.cabana-label{flex-shrink:0;display:flex;align-items:center;padding:0 12px;font-size:13px;font-weight:600;border-right:2px solid var(--border);position:sticky;left:0;z-index:5;background:var(--surface);white-space:nowrap;gap:6px}
+.cabana-color-bar{width:3px;height:16px;border-radius:2px;flex-shrink:0}
+.day-cell{flex-shrink:0;border-right:1px solid var(--border);position:relative;min-height:52px}
+.day-cell.is-weekend{background:#FAF7F4}
+.day-cell.is-today{background:rgba(192,57,43,0.04)}
+.today-line{position:absolute;top:0;bottom:0;left:50%;width:1.5px;background:var(--today);opacity:0.45;pointer-events:none;z-index:3}
+.res-bar{position:absolute;top:50%;transform:translateY(-50%);height:28px;border-radius:4px;display:flex;align-items:center;padding:0 8px;font-size:11px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;z-index:4;box-shadow:0 1px 4px rgba(0,0,0,0.18);transition:filter 0.12s,box-shadow 0.12s}
+.res-bar:hover{filter:brightness(1.1);box-shadow:0 2px 10px rgba(0,0,0,0.25);z-index:6}
+.overlay{position:fixed;inset:0;background:rgba(42,32,24,0.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(2px)}
+.overlay.hidden{display:none}
+.modal{background:var(--surface);border-radius:12px;width:100%;max-width:480px;max-height:90vh;overflow-y:auto;box-shadow:0 8px 40px rgba(0,0,0,0.22)}
+.modal-header{padding:20px 24px 0;display:flex;align-items:center;justify-content:space-between}
+.modal-header h2{font-family:"DM Serif Display",serif;font-size:18px;font-weight:400}
+.modal-close{background:none;border:none;cursor:pointer;color:var(--muted);font-size:20px;line-height:1;padding:4px}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:20px 24px}
+.modal-footer{padding:0 24px 20px;display:flex;gap:8px;justify-content:flex-end}
+.form-row{margin-bottom:14px}
+.form-row label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;text-transform:uppercase;letter-spacing:0.5px}
+.form-row input,.form-row select,.form-row textarea{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:7px;font-size:14px;font-family:"DM Sans",sans-serif;color:var(--text);background:var(--bg)}
+.form-row input:focus,.form-row select:focus{outline:none;border-color:var(--accent)}
+.form-row textarea{resize:vertical;min-height:60px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.cabanas-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.cabana-check{display:flex;align-items:center;gap:8px;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;cursor:pointer;transition:all 0.15s;user-select:none}
+.cabana-check.selected{border-color:var(--cabana-color);background:var(--cabana-bg)}
+.cabana-check input{display:none}
+.cabana-check-dot{width:10px;height:10px;border-radius:2px;flex-shrink:0}
+.cabana-check span{font-size:13px;font-weight:500}
+.btn{padding:9px 18px;border-radius:7px;font-size:13px;font-weight:600;cursor:pointer;transition:all 0.15s;border:none;font-family:"DM Sans",sans-serif}
+.btn-primary{background:var(--accent);color:#fff}
+.btn-primary:hover{background:#185FA5}
+.btn-primary:disabled{background:#aaa;cursor:not-allowed}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#962d22}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--muted)}
+.btn-ghost:hover{background:var(--bg)}
+.confirm-overlay{position:fixed;inset:0;background:rgba(42,32,24,0.5);z-index:200;display:flex;align-items:center;justify-content:center;padding:16px}
+.confirm-overlay.hidden{display:none}
+.confirm-box{background:var(--surface);border-radius:12px;padding:28px 24px;max-width:360px;width:100%;box-shadow:0 8px 40px rgba(0,0,0,0.25);text-align:center}
+.confirm-box h3{font-family:"DM Serif Display",serif;font-size:18px;font-weight:400;margin-bottom:10px;color:var(--text)}
+.confirm-box p{font-size:13px;color:var(--muted);margin-bottom:22px;line-height:1.5}
+.confirm-actions{display:flex;gap:10px;justify-content:center}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--text);color:#F7F3EE;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;z-index:200;opacity:0;transition:opacity 0.3s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.toast.error{background:var(--danger)}
+.toast.success{background:var(--success)}
+.footer{text-align:center;padding:10px;font-size:11px;color:var(--muted);border-top:1px solid var(--border);background:var(--surface)}
+.loading-bar{height:3px;background:var(--accent);width:0;transition:width 0.3s;position:fixed;top:0;left:0;z-index:300}
+</style>
+</head>
+<body>
+<div class="loading-bar" id="loading-bar"></div>
+<div class="header">
+  <div style="display:flex;align-items:baseline"><h1>La Pausa</h1><span class="header-sub">Disponibilidad de cabañas</span></div>
+  <div class="nav-controls">
+    <button class="nav-btn" id="prev-btn">&#8249;</button>
+    <span class="month-label" id="month-label"></span>
+    <button class="nav-btn" id="next-btn">&#8250;</button>
+    <button class="today-btn" id="today-btn">Hoy</button>
+    <button class="new-btn" id="new-btn">+ Nueva reserva</button>
+  </div>
+</div>
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#7B68C8"></div>Suspiros</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#2E9E6B"></div>Cactus</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#D4692A"></div>Sta. Fé 3</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#C45A82"></div>Sta. Fé 4</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#B8920A"></div>Escondido</div>
+  <div class="legend-item" style="margin-left:auto"><div class="legend-dot" style="background:var(--today);border-radius:50%"></div>Hoy</div>
+</div>
+<div id="gantt-wrap" class="gantt-wrap"></div>
+<div class="footer" id="footer">Datos al: 24/5/2026, 11:16:00 &middot; 62 reservas</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="modal">
+    <div class="modal-header">
+      <h2 id="modal-title">Nueva reserva</h2>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row" id="cabanas-row">
+        <label>Cabañas</label>
+        <div class="cabanas-grid">
+          <label class="cabana-check" data-id="Suspiros" style="--cabana-color:#7B68C8;--cabana-bg:#EDE9F9"><input type="checkbox" value="Suspiros"><div class="cabana-check-dot" style="background:#7B68C8"></div><span>Suspiros</span></label>
+          <label class="cabana-check" data-id="Cactus" style="--cabana-color:#2E9E6B;--cabana-bg:#E2F5EC"><input type="checkbox" value="Cactus"><div class="cabana-check-dot" style="background:#2E9E6B"></div><span>Cactus</span></label>
+          <label class="cabana-check" data-id="Sta. Fé 3" style="--cabana-color:#D4692A;--cabana-bg:#FAEEE6"><input type="checkbox" value="Sta. Fé 3"><div class="cabana-check-dot" style="background:#D4692A"></div><span>Sta. Fé 3</span></label>
+          <label class="cabana-check" data-id="Sta. Fé 4" style="--cabana-color:#C45A82;--cabana-bg:#FAEAF1"><input type="checkbox" value="Sta. Fé 4"><div class="cabana-check-dot" style="background:#C45A82"></div><span>Sta. Fé 4</span></label>
+          <label class="cabana-check" data-id="Escondido" style="--cabana-color:#B8920A;--cabana-bg:#FDF8E3"><input type="checkbox" value="Escondido"><div class="cabana-check-dot" style="background:#B8920A"></div><span>Escondido</span></label>
+        </div>
+      </div>
+      <div class="form-row hidden" id="cabana-single-row">
+        <label>Cabaña</label>
+        <select id="f-cabana-single">
+          <option value="Suspiros">Suspiros</option><option value="Cactus">Cactus</option>
+          <option value="Sta. Fé 3">Sta. Fé 3</option><option value="Sta. Fé 4">Sta. Fé 4</option>
+          <option value="Escondido">Escondido</option>
+        </select>
+      </div>
+      <div class="form-row"><label>Huésped</label><input type="text" id="f-huesped" placeholder="Nombre completo"></div>
+      <div class="form-grid">
+        <div class="form-row"><label>Ingreso</label><input type="date" id="f-ingreso"></div>
+        <div class="form-row"><label>Egreso</label><input type="date" id="f-egreso"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Tarifa total ($)</label><input type="number" id="f-tarifa" placeholder="0"></div>
+        <div class="form-row"><label>Seña ($)</label><input type="number" id="f-sena" placeholder="0"></div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Pax</label><input type="number" id="f-pax" placeholder="2" min="1"></div>
+        <div class="form-row"><label>Canal</label>
+          <select id="f-canal"><option value="Directo">Directo</option><option value="Airbnb">Airbnb</option><option value="Booking">Booking</option><option value="Otro">Otro</option></select>
+        </div>
+      </div>
+      <div class="form-grid">
+        <div class="form-row"><label>Estado</label>
+          <select id="f-estado"><option value="Confirmada">Confirmada</option><option value="Señada">Señada</option><option value="Pendiente">Pendiente</option><option value="Cancelada">Cancelada</option></select>
+        </div>
+        <div class="form-row"><label>Mascota</label>
+          <select id="f-mascota"><option value="No">No</option><option value="Sí">Sí</option></select>
+        </div>
+      </div>
+      <div class="form-row"><label>Notas</label><textarea id="f-notas" placeholder="Descuentos, pedidos especiales…"></textarea></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-danger hidden" id="btn-delete">Eliminar</button>
+      <button class="btn btn-ghost" id="btn-cancel">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save">Guardar reserva</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="confirm-overlay hidden" id="confirm-overlay">
+  <div class="confirm-box">
+    <h3>&#x26A0;&#xFE0F; Eliminar reserva</h3>
+    <p id="confirm-msg">&#xBF;Ests segura de que quer&#xE9;s eliminar esta reserva? Esta acci&#xF3;n no se puede deshacer.</p>
+    <div class="confirm-actions">
+      <button class="btn btn-ghost" id="confirm-cancel">Cancelar</button>
+      <button class="btn btn-danger" id="confirm-ok">S&#xED;, eliminar</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const NOTION_TOKEN = "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";
+const DB_ID = "08590c09-48d3-4bb2-acef-10ec30131072";
+const WEBAPP_URL = "https://script.google.com/macros/s/AKfycbxATG4CREdZJyPSGHOp2OSto2TdBG2H_3NfrM-XDndd-iISRkf4_cYQW8ZoyEEmHNyjFg/exec";
+
+// Datos pre-cargados por el script (sin CORS)
+const RESERVAS_INIT = [{"pageId":"36a9afcf-320b-816c-ab49-fa97af7fbd28","huesped":"Paula Petroni","cabana":"Cactus","ingreso":"2026-01-02","egreso":"2026-01-07","tarifa":562500,"sena":0,"pax":4,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Poner cama extra"},{"pageId":"36a9afcf-320b-8197-a1c1-db8ef5397144","huesped":"Andrea Natalia Vidal","cabana":"Suspiros","ingreso":"2026-01-02","egreso":"2026-01-04","tarifa":250000,"sena":0,"pax":4,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-813a-a496-c01116464349","huesped":"Valeria Casielles","cabana":"Sta. Fé 3","ingreso":"2026-01-05","egreso":"2026-01-17","tarifa":1687500,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81d1-98db-f2d3d4ec6bff","huesped":"Mariana Corvalán","cabana":"Suspiros","ingreso":"2026-01-05","egreso":"2026-01-31","tarifa":4000000,"sena":0,"pax":7,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Estadía larga - precio por todas las casas"},{"pageId":"36a9afcf-320b-81dc-a380-e7dfaf13a30f","huesped":"Silvina Torres","cabana":"Sta. Fé 4","ingreso":"2026-01-06","egreso":"2026-01-12","tarifa":540000,"sena":0,"pax":1,"canal":"Directo","estado":"Confirmada","mascota":"Sí","notas":"Ingreso 19hs"},{"pageId":"36a9afcf-320b-8137-b85f-caa2aa6deaea","huesped":"Juan Boarí","cabana":"Escondido","ingreso":"2026-01-12","egreso":"2026-01-26","tarifa":1140000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-814b-b83e-e90050a5eb0e","huesped":"Yamila Arena","cabana":"Sta. Fé 4","ingreso":"2026-01-12","egreso":"2026-01-13","tarifa":400000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81d9-ba5f-eae3ac866e40","huesped":"Juan Boarí","cabana":"Sta. Fé 4","ingreso":"2026-01-15","egreso":"2026-01-17","tarifa":160000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81ab-b3c4-d4071c5e29c1","huesped":"Mariana Corvalán","cabana":"Cactus","ingreso":"2026-01-17","egreso":"2026-01-31","tarifa":1750000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Parte del grupo Corvalán"},{"pageId":"36a9afcf-320b-8117-977d-f6c8208b6c2d","huesped":"Catalina","cabana":"Sta. Fé 3","ingreso":"2026-01-24","egreso":"2026-01-26","tarifa":210000,"sena":0,"pax":3,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-811d-951c-df818ef3f9d0","huesped":"Mariana Corvalán","cabana":"Sta. Fé 4","ingreso":"2026-01-25","egreso":"2026-01-31","tarifa":540000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Parte del grupo Corvalán"},{"pageId":"36a9afcf-320b-81c7-82b7-c63ae6d86ea8","huesped":"Maria Victoria Tripoli","cabana":"Sta. Fé 3","ingreso":"2026-01-26","egreso":"2026-02-01","tarifa":210000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81a7-b883-f1bb7e226f72","huesped":"Laura Pinalli","cabana":"Escondido","ingreso":"2026-01-30","egreso":"2026-02-01","tarifa":210000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-8154-9e00-dc6a46ccbf4a","huesped":"Albertina","cabana":"Suspiros","ingreso":"2026-02-02","egreso":"2026-02-12","tarifa":1500000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81f5-b73e-fb24a3ffccb7","huesped":"Familia de Albertina","cabana":"Sta. Fé 4","ingreso":"2026-02-06","egreso":"2026-02-07","tarifa":130000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81ef-b48c-f67adba353bd","huesped":"Marcos","cabana":"Sta. Fé 3","ingreso":"2026-02-07","egreso":"2026-02-08","tarifa":130000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-8137-ad73-c94e18c58046","huesped":"Anita","cabana":"Escondido","ingreso":"2026-02-08","egreso":"2026-02-09","tarifa":130000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81d1-8afc-d83aca714535","huesped":"Airbnb","cabana":"Cactus","ingreso":"2026-02-09","egreso":"2026-02-15","tarifa":512988,"sena":0,"pax":0,"canal":"Airbnb","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81e9-8926-dae12d7ec2d1","huesped":"Yamila Arena","cabana":"Suspiros","ingreso":"2026-02-13","egreso":"2026-02-17","tarifa":540000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"4 noches - Carnaval"},{"pageId":"36a9afcf-320b-81e6-bd0f-d7195012ef32","huesped":"Silvina Zacarian","cabana":"Escondido","ingreso":"2026-02-14","egreso":"2026-02-17","tarifa":490000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Pagó todo"},{"pageId":"36a9afcf-320b-818b-b9df-c162a297ebda","huesped":"Laura Pinalli","cabana":"Escondido","ingreso":"2026-02-20","egreso":"2026-02-22","tarifa":210000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-819e-a52e-ef43d2f05b8d","huesped":"Pablo Perich","cabana":"Sta. Fé 4","ingreso":"2026-02-20","egreso":"2026-02-22","tarifa":210000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-816d-a3cc-c26879261ba1","huesped":"Paula Spagnoleti","cabana":"Cactus","ingreso":"2026-02-20","egreso":"2026-02-22","tarifa":270000,"sena":0,"pax":5,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"3 adultos 2 niños"},{"pageId":"36a9afcf-320b-818b-91fa-d81f172ee509","huesped":"Gise","cabana":"Suspiros","ingreso":"2026-02-20","egreso":"2026-02-22","tarifa":370000,"sena":0,"pax":6,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-819d-a38b-d80fe4fc1b94","huesped":"Marcos","cabana":"Sta. Fé 3","ingreso":"2026-02-21","egreso":"2026-02-22","tarifa":130000,"sena":0,"pax":3,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81da-aaa8-ef8338d13768","huesped":"Patricia Barbagallo","cabana":"Cactus","ingreso":"2026-02-23","egreso":"2026-02-26","tarifa":375000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81ef-b3a0-c5da7ddf1219","huesped":"Natalia Vidal","cabana":"Suspiros","ingreso":"2026-02-27","egreso":"2026-03-01","tarifa":270000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81f3-90c6-c8d50be1fa01","huesped":"Eugenia Elli","cabana":"Sta. Fé 3","ingreso":"2026-02-28","egreso":"2026-03-01","tarifa":130000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-8172-b344-ddb7e38ae89c","huesped":"Florencia González","cabana":"Sta. Fé 3","ingreso":"2026-03-02","egreso":"2026-03-05","tarifa":240000,"sena":0,"pax":1,"canal":"Directo","estado":"Confirmada","mascota":"Sí","notas":"Mascota: Lola"},{"pageId":"36a9afcf-320b-81ed-8916-c59383113485","huesped":"Eleonora","cabana":"Cactus","ingreso":"2026-03-06","egreso":"2026-03-08","tarifa":285000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-8179-9fda-d5265601f766","huesped":"Marta Goncalvez","cabana":"Sta. Fé 4","ingreso":"2026-03-07","egreso":"2026-03-08","tarifa":130000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-8115-9cee-d2ddbef6098b","huesped":"Macarena Murciano","cabana":"Suspiros","ingreso":"2026-03-07","egreso":"2026-03-08","tarifa":235000,"sena":0,"pax":4,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-819e-82a4-c6f4c93306e1","huesped":"Roxana Carpio","cabana":"Sta. Fé 4","ingreso":"2026-03-10","egreso":"2026-03-13","tarifa":270000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-819d-a6cd-c4b1b88cccc2","huesped":"Fernando Formoso","cabana":"Cactus","ingreso":"2026-03-11","egreso":"2026-03-15","tarifa":440000,"sena":0,"pax":3,"canal":"Directo","estado":"Confirmada","mascota":"Sí","notas":""},{"pageId":"36a9afcf-320b-8110-804f-e489e702d73a","huesped":"Cecilia Bellini","cabana":"Sta. Fé 3","ingreso":"2026-03-12","egreso":"2026-03-15","tarifa":270000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81ef-a340-ef68b038357c","huesped":"Marcelina","cabana":"Cactus","ingreso":"2026-03-13","egreso":"2026-03-15","tarifa":285600,"sena":0,"pax":2,"canal":"Airbnb","estado":"Confirmada","mascota":"Sí","notas":"USD 204"},{"pageId":"36a9afcf-320b-8173-ae20-cbef3e554623","huesped":"Silvia","cabana":"Cactus","ingreso":"2026-03-19","egreso":"2026-03-22","tarifa":430000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"3 noches - Finde largo"},{"pageId":"36a9afcf-320b-81bb-94dd-f12d6c11be1e","huesped":"Marcela Barranco","cabana":"Suspiros","ingreso":"2026-03-27","egreso":"2026-03-29","tarifa":320000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-8188-82af-d2a3006b5056","huesped":"Silvina Gornati","cabana":"Cactus","ingreso":"2026-04-01","egreso":"2026-04-05","tarifa":475000,"sena":0,"pax":4,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Llegan el 1 medio tarde"},{"pageId":"36a9afcf-320b-8183-82d0-ece7eb3bec72","huesped":"Silvina Gornati","cabana":"Suspiros","ingreso":"2026-04-01","egreso":"2026-04-05","tarifa":650000,"sena":0,"pax":4,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Semana Santa"},{"pageId":"36a9afcf-320b-81b2-8365-e826baab4725","huesped":"Sole Magnello","cabana":"Escondido","ingreso":"2026-04-02","egreso":"2026-04-05","tarifa":240000,"sena":120000,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-8147-9831-c8113c6c62f6","huesped":"Luciana Melgar","cabana":"Sta. Fé 4","ingreso":"2026-04-02","egreso":"2026-04-05","tarifa":300000,"sena":0,"pax":3,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"3 noches"},{"pageId":"36a9afcf-320b-81c2-991a-c4d43441d24f","huesped":"Bibi Amenábar","cabana":"Sta. Fé 3","ingreso":"2026-04-02","egreso":"2026-04-05","tarifa":270000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-8180-95a8-df39ba99900b","huesped":"Grupo Giuli","cabana":"Escondido","ingreso":"2026-04-06","egreso":"2026-04-12","tarifa":230000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Grupo"},{"pageId":"36a9afcf-320b-814d-b958-f9d37123020f","huesped":"Grupo Giuli","cabana":"Sta. Fé 4","ingreso":"2026-04-06","egreso":"2026-04-12","tarifa":230000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Grupo"},{"pageId":"36a9afcf-320b-81f8-bf35-dd22f4f47e2b","huesped":"Grupo Giuli","cabana":"Sta. Fé 3","ingreso":"2026-04-06","egreso":"2026-04-12","tarifa":230000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Grupo"},{"pageId":"36a9afcf-320b-81b3-bc07-e45f2818e02c","huesped":"Grupo Giuli","cabana":"Cactus","ingreso":"2026-04-06","egreso":"2026-04-12","tarifa":290000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Grupo"},{"pageId":"36a9afcf-320b-8194-9a67-da010b08a34c","huesped":"Marina Rey","cabana":"Suspiros","ingreso":"2026-04-09","egreso":"2026-04-12","tarifa":350000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Con bebé - poner cuna"},{"pageId":"36a9afcf-320b-81e7-9c37-c35cf3eda9ad","huesped":"Paola","cabana":"Sta. Fé 3","ingreso":"2026-04-17","egreso":"2026-04-19","tarifa":210000,"sena":0,"pax":3,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-818d-a15b-e9b9c71a273f","huesped":"Tomas Ochoa","cabana":"Escondido","ingreso":"2026-05-02","egreso":"2026-05-04","tarifa":200000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Parte del grupo Ochoa"},{"pageId":"36a9afcf-320b-81f9-9587-c1423f51b957","huesped":"Tomas Ochoa","cabana":"Sta. Fé 4","ingreso":"2026-05-02","egreso":"2026-05-04","tarifa":200000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Parte del grupo Ochoa"},{"pageId":"36a9afcf-320b-8194-af3d-c8847c1de8d1","huesped":"Tomas Ochoa","cabana":"Sta. Fé 3","ingreso":"2026-05-02","egreso":"2026-05-04","tarifa":200000,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Parte del grupo Ochoa"},{"pageId":"36a9afcf-320b-814f-9d87-f0d911c1b1c5","huesped":"Tomas Ochoa","cabana":"Cactus","ingreso":"2026-05-02","egreso":"2026-05-04","tarifa":250000,"sena":0,"pax":16,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"Grupo 16 personas"},{"pageId":"36a9afcf-320b-81bb-9c51-fe29681898cb","huesped":"Santiago (Airbnb)","cabana":"Cactus","ingreso":"2026-05-08","egreso":"2026-05-10","tarifa":208600,"sena":0,"pax":0,"canal":"Airbnb","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81be-88c5-c6b8ad87026d","huesped":"Rocío Martínez","cabana":"Sta. Fé 3","ingreso":"2026-05-15","egreso":"2026-05-17","tarifa":210000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-81d0-a13b-e90f421af5ee","huesped":"Alejandro Martin","cabana":"Sta. Fé 4","ingreso":"2026-05-17","egreso":"2026-05-18","tarifa":150000,"sena":75000,"pax":3,"canal":"Directo","estado":"Señada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-8173-8be2-ed02a82051e2","huesped":"Diego Jaimovich","cabana":"Suspiros","ingreso":"2026-05-22","egreso":"2026-05-26","tarifa":400000,"sena":0,"pax":2,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":""},{"pageId":"3689afcf-320b-80fa-8fe8-c96f12c0b235","huesped":"Natalia Vidal","cabana":"Sta. Fé 4","ingreso":"2026-05-22","egreso":"2026-05-25","tarifa":279000,"sena":0,"pax":2,"canal":"Directo","estado":"Señada","mascota":"No","notas":""},{"pageId":"3689afcf-320b-80dd-94c1-eca0fef82138","huesped":"Francisco Herzberg","cabana":"Sta. Fé 3","ingreso":"2026-05-22","egreso":"2026-05-25","tarifa":240000,"sena":0,"pax":2,"canal":"Directo","estado":"Señada","mascota":"No","notas":""},{"pageId":"3689afcf-320b-8016-801e-c2beeed2878e","huesped":"Nadia Kossakoff","cabana":"Cactus","ingreso":"2026-05-22","egreso":"2026-05-25","tarifa":290000,"sena":0,"pax":2,"canal":"Directo","estado":"Señada","mascota":"No","notas":""},{"pageId":"36a9afcf-320b-812a-9114-e4dd48b49019","huesped":"Vicky Cimino","cabana":"Escondido","ingreso":"2026-05-30","egreso":"2026-06-01","tarifa":211500,"sena":0,"pax":0,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"10% descuento"},{"pageId":"36a9afcf-320b-81d0-9bd7-e09987b42795","huesped":"Gaby Candioti","cabana":"Suspiros","ingreso":"2026-08-07","egreso":"2026-08-09","tarifa":400000,"sena":0,"pax":4,"canal":"Directo","estado":"Confirmada","mascota":"No","notas":"También Loft 3"}];
+
+const CABANAS_CFG=[{id:"Suspiros",color:"#7B68C8"},{id:"Cactus",color:"#2E9E6B"},{id:"Sta. Fé 3",color:"#D4692A"},{id:"Sta. Fé 4",color:"#C45A82"},{id:"Escondido",color:"#B8920A"}];
+const MONTHS=["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"];
+const DAYS=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"];
+const CAB_W=108,DAY_W=38;
+
+let curYear=new Date().getFullYear(),curMonth=new Date().getMonth();
+let allReservas=[...RESERVAS_INIT];
+let editingPageId=null,isEditMode=false;
+
+// ── NOTION API (solo escritura, via proxy) ───────────────────────
+async function webappCall(payload){
+  const resp=await fetch("https://script.google.com/macros/s/AKfycbxATG4CREdZJyPSGHOp2OSto2TdBG2H_3NfrM-XDndd-iISRkf4_cYQW8ZoyEEmHNyjFg/exec",{
+    method:"POST",
+    headers:{"Content-Type":"text/plain"},
+    body:JSON.stringify(payload)
+  });
+  if(!resp.ok) throw new Error("Error "+resp.status);
+  const data=await resp.json();
+  if(data.error) throw new Error(data.error);
+  return data;
+}
+
+async function crearReserva(cabana,d){
+  return webappCall({action:"crear",cabana,datos:d});
+}
+
+async function editarReserva(pageId,cabana,d){
+  return webappCall({action:"editar",pageId,cabana,datos:d});
+}
+
+async function eliminarReserva(pageId){
+  return webappCall({action:"eliminar",pageId});
+}
+
+// ── GANTT ────────────────────────────────────────────────────────
+function parseDate(s){const[y,m,d]=s.split("-").map(Number);return new Date(y,m-1,d);}
+function toDateStr(d){return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");}
+function fmtARS(n){return n?"$ "+n.toLocaleString("es-AR"):"—";}
+
+function renderGantt(){
+  const days=new Date(curYear,curMonth+1,0).getDate(),todayStr=toDateStr(new Date());
+  document.getElementById("month-label").textContent=MONTHS[curMonth]+" "+curYear;
+  const wrap=document.getElementById("gantt-wrap");wrap.innerHTML="";
+  const gantt=document.createElement("div");gantt.className="gantt";gantt.style.width=(CAB_W+days*DAY_W)+"px";
+  const hRow=document.createElement("div");hRow.className="day-header-row";
+  const corner=document.createElement("div");corner.className="corner-cell";corner.style.width=CAB_W+"px";corner.textContent="Cabaña";hRow.appendChild(corner);
+  for(let d=1;d<=days;d++){
+    const date=new Date(curYear,curMonth,d),ds=toDateStr(date),dow=date.getDay();
+    const cell=document.createElement("div");
+    cell.className="day-header-cell"+(dow===0||dow===6?" is-weekend":"")+(ds===todayStr?" is-today":"");
+    cell.style.width=DAY_W+"px";cell.innerHTML='<span class="dow">'+DAYS[dow]+"</span>"+d;
+    hRow.appendChild(cell);
+  }
+  gantt.appendChild(hRow);
+  CABANAS_CFG.forEach(cab=>{
+    const row=document.createElement("div");row.className="cabana-row";row.style.width=(CAB_W+days*DAY_W)+"px";
+    const label=document.createElement("div");label.className="cabana-label";label.style.width=CAB_W+"px";
+    label.innerHTML='<div class="cabana-color-bar" style="background:'+cab.color+'"></div>'+cab.id;
+    row.appendChild(label);
+    for(let d=1;d<=days;d++){
+      const date=new Date(curYear,curMonth,d),ds=toDateStr(date),dow=date.getDay();
+      const cell=document.createElement("div");
+      cell.className="day-cell"+(dow===0||dow===6?" is-weekend":"")+(ds===todayStr?" is-today":"");
+      cell.style.width=DAY_W+"px";
+      if(ds===todayStr){const l=document.createElement("div");l.className="today-line";cell.appendChild(l);}
+      row.appendChild(cell);
+    }
+    const mS=new Date(curYear,curMonth,1),mE=new Date(curYear,curMonth,days);
+    allReservas.filter(r=>r.cabana===cab.id&&r.ingreso&&r.egreso).forEach(r=>{
+      const rS=parseDate(r.ingreso),rE=parseDate(r.egreso);
+      const vS=rS<mS?mS:rS,vE=rE>mE?mE:rE;
+      if(vS>=mE||vE<=mS)return;
+      const sd=vS.getDate(),ed=vE.getDate(),sp=ed-sd;
+      if(sp<=0)return;
+      const bar=document.createElement("div");bar.className="res-bar";bar.style.background=cab.color;
+      bar.style.left=(CAB_W+(sd-1)*DAY_W+2)+"px";bar.style.width=(sp*DAY_W-4)+"px";
+      bar.textContent=r.huesped;bar.title=r.huesped;
+      bar.addEventListener("click",()=>openEdit(r));
+      row.appendChild(bar);
+    });
+    gantt.appendChild(row);
+  });
+  wrap.appendChild(gantt);
+}
+
+// ── MODAL ────────────────────────────────────────────────────────
+function openNew(){
+  isEditMode=false;editingPageId=null;
+  document.getElementById("modal-title").textContent="Nueva reserva";
+  document.getElementById("cabanas-row").style.display="";
+  document.getElementById("cabana-single-row").style.display="none";
+  document.getElementById("btn-delete").style.display="none";
+  document.getElementById("btn-save").textContent="Guardar reserva";
+  document.querySelectorAll(".cabana-check").forEach(el=>{el.querySelector("input").checked=false;el.classList.remove("selected");});
+  clearForm();
+  document.getElementById("overlay").classList.remove("hidden");
+  setTimeout(()=>document.getElementById("f-huesped").focus(),100);
+}
+
+function openEdit(r){
+  isEditMode=true;editingPageId=r.pageId;
+  document.getElementById("modal-title").textContent="Editar reserva";
+  document.getElementById("cabanas-row").style.display="none";
+  document.getElementById("cabana-single-row").style.display="";
+  document.getElementById("btn-delete").style.display="";
+  document.getElementById("btn-save").textContent="Guardar cambios";
+  document.getElementById("f-cabana-single").value=r.cabana;
+  document.getElementById("f-huesped").value=r.huesped||"";
+  document.getElementById("f-ingreso").value=r.ingreso||"";
+  document.getElementById("f-egreso").value=r.egreso||"";
+  document.getElementById("f-tarifa").value=r.tarifa||"";
+  document.getElementById("f-sena").value=r.sena||"";
+  document.getElementById("f-pax").value=r.pax||"";
+  document.getElementById("f-canal").value=r.canal||"Directo";
+  document.getElementById("f-estado").value=r.estado||"Confirmada";
+  document.getElementById("f-mascota").value=r.mascota||"No";
+  document.getElementById("f-notas").value=r.notas||"";
+  document.getElementById("overlay").classList.remove("hidden");
+}
+
+function closeModal(){document.getElementById("overlay").classList.add("hidden");}
+
+function clearForm(){
+  ["f-huesped","f-ingreso","f-egreso","f-tarifa","f-sena","f-pax","f-notas"].forEach(id=>document.getElementById(id).value="");
+  document.getElementById("f-canal").value="Directo";
+  document.getElementById("f-estado").value="Confirmada";
+  document.getElementById("f-mascota").value="No";
+}
+
+document.querySelectorAll(".cabana-check").forEach(el=>{
+  el.addEventListener("click",()=>{
+    const cb=el.querySelector("input");cb.checked=!cb.checked;el.classList.toggle("selected",cb.checked);
+  });
+});
+
+// ── GUARDAR ──────────────────────────────────────────────────────
+document.getElementById("btn-save").addEventListener("click",async()=>{
+  const huesped=document.getElementById("f-huesped").value.trim();
+  const ingreso=document.getElementById("f-ingreso").value;
+  const egreso=document.getElementById("f-egreso").value;
+  if(!huesped||!ingreso||!egreso){showToast("Completá huésped, ingreso y egreso","error");return;}
+  if(egreso<=ingreso){showToast("El egreso debe ser posterior al ingreso","error");return;}
+  const datos={huesped,ingreso,egreso,
+    tarifa:document.getElementById("f-tarifa").value,
+    sena:document.getElementById("f-sena").value,
+    pax:document.getElementById("f-pax").value,
+    canal:document.getElementById("f-canal").value,
+    estado:document.getElementById("f-estado").value,
+    mascota:document.getElementById("f-mascota").value,
+    notas:document.getElementById("f-notas").value};
+  const btn=document.getElementById("btn-save");
+  btn.disabled=true;btn.textContent="Guardando…";setLoading(true);
+  try{
+    if(isEditMode){
+      const cabana=document.getElementById("f-cabana-single").value;
+      await editarReserva(editingPageId,cabana,datos);
+      // Actualizar local
+      const idx=allReservas.findIndex(r=>r.pageId===editingPageId);
+      if(idx>=0) allReservas[idx]={...allReservas[idx],...datos,cabana};
+      showToast("✅ Reserva actualizada en Notion");
+    }else{
+      const sels=[...document.querySelectorAll(".cabana-check input:checked")].map(cb=>cb.value);
+      if(sels.length===0){showToast("Seleccioná al menos una cabaña","error");btn.disabled=false;btn.textContent="Guardar reserva";setLoading(false);return;}
+      const results=await Promise.all(sels.map(cab=>crearReserva(cab,datos)));
+      // Agregar al estado local
+      results.forEach((res,i)=>{
+        if(res.id) allReservas.push({pageId:res.id,cabana:sels[i],...datos});
+      });
+      showToast("✅ "+sels.length+" reserva"+(sels.length>1?"s":"")+" creada"+(sels.length>1?"s":"")+" en Notion");
+    }
+    closeModal();renderGantt();
+  }catch(e){
+    showToast("Error: "+e.message,"error");
+  }finally{
+    btn.disabled=false;btn.textContent=isEditMode?"Guardar cambios":"Guardar reserva";setLoading(false);
+  }
+});
+
+document.getElementById("btn-delete").addEventListener("click",()=>{
+  const r=allReservas.find(x=>x.pageId===editingPageId);
+  const nombre=r?r.huesped:"esta reserva";
+  document.getElementById("confirm-msg").textContent="¿Estás segura de que querés eliminar la reserva de "+nombre+"? Esta acción no se puede deshacer.";
+  document.getElementById("confirm-overlay").classList.remove("hidden");
+});
+
+document.getElementById("confirm-cancel").addEventListener("click",()=>{
+  document.getElementById("confirm-overlay").classList.add("hidden");
+});
+
+document.getElementById("confirm-ok").addEventListener("click",async()=>{
+  document.getElementById("confirm-overlay").classList.add("hidden");
+  setLoading(true);
+  try{
+    await eliminarReserva(editingPageId);
+    allReservas=allReservas.filter(r=>r.pageId!==editingPageId);
+    showToast("✅ Reserva eliminada correctamente");
+    closeModal();renderGantt();
+  }catch(e){
+    showToast("Error al eliminar: "+e.message,"error");
+  }finally{setLoading(false);}
+});
+
+function showToast(msg,type="success"){
+  const t=document.getElementById("toast");t.textContent=msg;t.className="toast "+type+" show";
+  setTimeout(()=>t.className="toast",3500);
+}
+function setLoading(on){
+  const bar=document.getElementById("loading-bar");bar.style.width=on?"60%":"100%";
+  if(!on)setTimeout(()=>bar.style.width="0",400);
+}
+
+document.getElementById("prev-btn").addEventListener("click",()=>{curMonth--;if(curMonth<0){curMonth=11;curYear--;}renderGantt();});
+document.getElementById("next-btn").addEventListener("click",()=>{curMonth++;if(curMonth>11){curMonth=0;curYear++;}renderGantt();});
+document.getElementById("today-btn").addEventListener("click",()=>{curYear=new Date().getFullYear();curMonth=new Date().getMonth();renderGantt();});
+document.getElementById("new-btn").addEventListener("click",openNew);
+document.getElementById("modal-close").addEventListener("click",closeModal);
+document.getElementById("btn-cancel").addEventListener("click",closeModal);
+document.getElementById("overlay").addEventListener("click",e=>{if(e.target===document.getElementById("overlay"))closeModal();});
+
+renderGantt();
+</script>
+</body>
+</html>
