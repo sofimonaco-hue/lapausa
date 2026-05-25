@@ -106,7 +106,7 @@ body{font-family:"DM Sans",sans-serif;background:var(--bg);color:var(--text);min
   <div class="legend-item" style="margin-left:auto"><div class="legend-dot" style="background:var(--today);border-radius:50%"></div>Hoy</div>
 </div>
 <div id="gantt-wrap" class="gantt-wrap"></div>
-<div class="footer" id="footer">Datos al: 24/5/2026, 11:41:53 &middot; 63 reservas</div>
+<div class="footer" id="footer">Datos al: 24/5/2026, 11:43:46 &middot; 63 reservas</div>
 
 <div class="overlay hidden" id="overlay">
   <div class="modal">
@@ -253,18 +253,23 @@ function renderGantt(){
       if(ds===todayStr){const l=document.createElement("div");l.className="today-line";cell.appendChild(l);}
       row.appendChild(cell);
     }
-    const mS=new Date(curYear,curMonth,1),mE=new Date(curYear,curMonth+1,0);
+    const mS=new Date(curYear,curMonth,1),mE=new Date(curYear,curMonth,days);
     allReservas.filter(r=>r.cabana===cab.id&&r.ingreso&&r.egreso).forEach(r=>{
-      const rS=parseDate(r.ingreso),rE=parseDate(r.egreso);
-      // Clip to current month — ingreso clips to month start, egreso clips to month end
+      const rS=parseDate(r.ingreso);
+      const rE=parseDate(r.egreso);
+      // La barra cubre desde ingreso hasta el día ANTERIOR al egreso (último noche)
+      // Ej: ingreso 30/5, egreso 1/6 → barra cubre 30/5 y 31/5
+      const rLastNight=new Date(rE);
+      rLastNight.setDate(rLastNight.getDate()-1);
+      // Si la última noche es antes del mes actual, no mostrar
+      if(rLastNight<mS)return;
+      // Si el ingreso es después del fin del mes, no mostrar
+      if(rS>mE)return;
+      // Clip al mes actual
       const vS=rS<mS?mS:rS;
-      const vE=rE>mE?mE:rE;
-      // Show if reservation overlaps this month at all
-      if(vS>mE||vE<mS)return;
+      const vE=rLastNight>mE?mE:rLastNight;
       const sd=vS.getDate();
-      // If egreso is in next month or last day, extend bar to end of month
-      const isEgresoThisMonth = rE.getFullYear()===curYear && rE.getMonth()===curMonth;
-      const ed=isEgresoThisMonth?rE.getDate():days+1;
+      const ed=vE.getDate()+1; // +1 porque el ancho es hasta el borde del día
       const sp=ed-sd;
       if(sp<=0)return;
       const bar=document.createElement("div");bar.className="res-bar";bar.style.background=cab.color;
